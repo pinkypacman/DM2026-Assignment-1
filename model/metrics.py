@@ -16,7 +16,7 @@ def MAE(y, y_pred):
     Mean Absolute Error Loss
     '''
     # TODO
-    pass
+    return np.mean(np.abs(y_pred - y))
 
 # Here is a loss function for logistic regression
 def logloss(y,y_pred):

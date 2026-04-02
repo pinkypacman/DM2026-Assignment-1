@@ -7,6 +7,12 @@ def MSE_grad(y,y_pred):
 	'''
 	return (2/len(y))*(y_pred-y)
 
+def MAE_grad(y,y_pred):
+	'''
+	Derivative of MAE loss w.r.t y_pred (not w)
+	'''
+	return (1/len(y))*np.sign(y_pred - y)
+
 def logloss_sigmoid_grad(y,y_pred):
 	'''
 	Derivative of sigmoid + log loss combination is equivalent to derivative of MSE 
