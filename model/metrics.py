@@ -33,13 +33,7 @@ def evaluate_linear_regression(y_true, y_pred, title='Linear Regression Evaluati
     y_true = np.asarray(y_true).ravel()
     y_pred = np.asarray(y_pred).ravel()
 
-    # TODO 
-    # metrics = {
-    #     'MSE': 'use sklearn.metrics to compute MSE',
-    #     'MAE': 'use sklearn.metrics to compute MAE',
-    #     'RMSE': 'use sklearn.metrics and numpy to compute RMSE',
-    #     'R-squared': 'use sklearn.metrics to compute R-squared',
-    # }
+    # MODIFIED
     metrics = {
         'MSE': mean_squared_error(y_true, y_pred),
         'MAE': mean_absolute_error(y_true, y_pred),
