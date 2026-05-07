@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
 DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "mobile_price.csv"
@@ -33,18 +34,31 @@ class Split:
 
 
 def load_split(seed: int = RANDOM_STATE) -> Split:
-    """Load mobile_price.csv and split 60/20/20 with the given seed."""
+    """Load mobile_price.csv and split 60/20/20 with the given seed.
+
+    Features are standardized with the scaler fit only on the training
+    portion — SVC with the default RBF kernel is scale-sensitive, and the
+    raw features span very different ranges (e.g. ram ~ thousands vs binary
+    flags), so unscaled inputs let one or two large-variance features
+    dominate the kernel.
+    """
     df = pd.read_csv(DATA_PATH)
     X = df.drop(columns=["price_range"]).to_numpy()
     y = df["price_range"].to_numpy()
 
     X_trainval, X_test, y_trainval, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=seed, shuffle=True
+        X, y, test_size=0.2, random_state=seed, shuffle=True, stratify=y
     )
     # 20:60 -> 1:3 val:train split -> test size = 0.25 for trainval
     X_train, X_val, y_train, y_val = train_test_split(
-        X_trainval, y_trainval, test_size=0.25, random_state=seed, shuffle=True
+        X_trainval, y_trainval, test_size=0.25, random_state=seed, shuffle=True, stratify=y_trainval
     )
+
+    scaler = StandardScaler().fit(X_train)
+    X_train = scaler.transform(X_train)
+    X_val = scaler.transform(X_val)
+    X_test = scaler.transform(X_test)
+
     return Split(X_train, X_val, X_test, y_train, y_val, y_test)
 
 
@@ -80,7 +94,7 @@ def run_q2b(split: Split, C_grid=C_GRID) -> pd.DataFrame:
         ]:
             acc, f1 = _score(model, X, y)
             C_out = int(C) if C >= 1 else C  # for nicer printing: int if whole number, else float
-            rows.append({"C": C_out, "accuracy": acc, "macro_f1": f1})
+            rows.append({"C": C_out, "split": name, "accuracy": acc, "macro_f1": f1})
     return pd.DataFrame(rows)
 
 

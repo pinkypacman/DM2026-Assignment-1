@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+from sklearn.feature_selection import f_classif
 from sklearn.metrics.cluster import adjusted_rand_score
 from sklearn.preprocessing import StandardScaler
 
@@ -26,16 +27,21 @@ class Q4Data:
     pca2: np.ndarray         # 2-D PCA projection
     pca: PCA
     y: np.ndarray            # price_range
+    feature_names: list[str] # original feature column names
 
 
 def load_q4_data() -> Q4Data:
     df = pd.read_csv(DATA_PATH)
     y = df["price_range"].to_numpy()
-    X = df.drop(columns=["price_range"]).to_numpy()
+    feat_df = df.drop(columns=["price_range"])
+    X = feat_df.to_numpy()
     Z = StandardScaler().fit_transform(X)
     pca = PCA(n_components=2, random_state=RANDOM_STATE).fit(Z)
     pca2 = pca.transform(Z)
-    return Q4Data(X=X, Z=Z, pca2=pca2, pca=pca, y=y)
+    return Q4Data(
+        X=X, Z=Z, pca2=pca2, pca=pca, y=y,
+        feature_names=list(feat_df.columns),
+    )
 
 
 def _scatter(coords: np.ndarray, labels: np.ndarray, title: str,
@@ -131,6 +137,57 @@ def run_q4d(data: Q4Data, save_path: Path | None = None
     return fig, ari
 
 
+def run_q4e(data: Q4Data, save_path: Path | None = None
+            ) -> tuple[plt.Figure, pd.DataFrame]:
+    """Per-feature importance: ANOVA F vs price_range alongside |PC1|/|PC2|.
+
+    Reveals the gap between PCA's unsupervised loading distribution and the
+    actually class-discriminative features — explains why both PCA-2D and
+    20-D K-means miss `price_range`.
+    """
+    f_stat, _ = f_classif(data.Z, data.y)
+    pc1 = np.abs(data.pca.components_[0])
+    pc2 = np.abs(data.pca.components_[1])
+
+    importance = pd.DataFrame({
+        "feature": data.feature_names,
+        "f_stat": f_stat,
+        "abs_pc1_loading": pc1,
+        "abs_pc2_loading": pc2,
+    }).sort_values("f_stat", ascending=True).reset_index(drop=True)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 7), sharey=True)
+    y_pos = np.arange(len(importance))
+
+    axes[0].barh(y_pos, importance["f_stat"], color="#377eb8")
+    axes[0].set_yticks(y_pos)
+    axes[0].set_yticklabels(importance["feature"])
+    axes[0].set_xlabel("ANOVA F-statistic vs price_range")
+    axes[0].set_title("Class-discriminative power (supervised)")
+    axes[0].grid(axis="x", alpha=0.3)
+
+    width = 0.4
+    axes[1].barh(y_pos - width / 2, importance["abs_pc1_loading"],
+                 height=width, color="#e41a1c", label="|PC1 loading|")
+    axes[1].barh(y_pos + width / 2, importance["abs_pc2_loading"],
+                 height=width, color="#4daf4a", label="|PC2 loading|")
+    axes[1].set_xlabel("Absolute PCA loading")
+    axes[1].set_title("PCA contribution (unsupervised)")
+    axes[1].legend(loc="lower right", frameon=True)
+    axes[1].grid(axis="x", alpha=0.3)
+
+    fig.suptitle(
+        "Q4(e) Feature importance — supervised F-stat vs PCA loadings "
+        "(features sorted by F-stat)",
+        fontsize=12,
+    )
+    fig.tight_layout()
+    if save_path:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=120, bbox_inches="tight")
+    return fig, importance.iloc[::-1].reset_index(drop=True)
+
+
 def main():
     out_dir = Path(__file__).parent / "figures"
     data = load_q4_data()
@@ -155,6 +212,11 @@ def main():
     print("\n=== Q4(d): K-means on PCA-2D features ===")
     _, ari_pca = run_q4d(data, save_path=out_dir / "q4d_kmeans_pca2.png")
     print(f"ARI (PCA-2D features) = {ari_pca:.4f}")
+
+    print("\n=== Q4(e): per-feature importance (F-stat vs PCA loadings) ===")
+    _, importance = run_q4e(data, save_path=out_dir / "q4e_feature_importance.png")
+    print("Top 5 by ANOVA F-statistic against price_range:")
+    print(importance.head(5).round(4).to_string(index=False))
 
     print("\nFigures saved to asg2/figures/.")
 
