@@ -1,5 +1,5 @@
 import numpy as np
-from model.utils import onehot_array
+from asg2.model.utils import onehot_array
 
 def MSE_grad(y,y_pred):
 	'''

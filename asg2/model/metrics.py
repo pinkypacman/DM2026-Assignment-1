@@ -1,5 +1,5 @@
 import numpy as np
-from model.utils import onehot_array
+from asg2.model.utils import onehot_array
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score, confusion_matrix,
     mean_squared_error, mean_absolute_error, r2_score

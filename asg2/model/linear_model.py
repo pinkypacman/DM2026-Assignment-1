@@ -1,5 +1,5 @@
 import numpy as np
-from model.utils import get_train_val,plot_learning_curve
+from asg2.model.utils import get_train_val,plot_learning_curve
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import accuracy_score, r2_score
 
